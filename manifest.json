@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "scripts": [
+    {
+      "name": "Windows 11 Optimizer",
+      "description": "Apply Windows 11 performance tuning and cleanup changes with a guided batch script.",
+      "path": "library/11_Optimizer.bat"
+    },
+    {
+      "name": "Windows 10 Optimizer",
+      "description": "Apply Windows 10 performance tuning and cleanup changes with a guided batch script.",
+      "path": "library/W10_optimizer.bat"
+    },
+    {
+      "name": "Plex Web Tagger",
+      "description": "Tag MKV files with release-keyword metadata so Plex MPV profiles trigger correctly.",
+      "path": "library/Plex_WEB_Tagger.py"
+    },
+    {
+      "name": "SoM MPV Setup",
+      "description": "Download and manage the MPV portable/install/uninstall setup used for a home theater workflow.",
+      "path": "library/SoM_MPV.ps1"
+    },
+    {
+      "name": "TBO Track Organizer",
+      "description": "Review and remove unwanted MKV audio and subtitle tracks while keeping preferred language sets.",
+      "path": "library/TBO.py"
+    }
+  ]
+}

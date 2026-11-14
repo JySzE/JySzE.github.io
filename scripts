@@ -1,0 +1,96 @@
+$ErrorActionPreference = 'Stop'
+$baseUrl = 'https://jysze.github.io'
+$manifestUrl = "$baseUrl/manifest.json"
+
+$manifest = Invoke-RestMethod -Uri $manifestUrl -ErrorAction Stop
+if ($null -eq $manifest -or $manifest.version -ne 1 -or $null -eq $manifest.scripts) {
+    throw "The script manifest at $manifestUrl is invalid or uses an unsupported version."
+}
+
+$availableScripts = @($manifest.scripts)
+if ($availableScripts.Count -eq 0) {
+    Write-Host 'No scripts are currently listed in the manifest.'
+    return
+}
+
+foreach ($scriptEntry in $availableScripts) {
+    if ([string]::IsNullOrWhiteSpace([string]$scriptEntry.name) -or
+        [string]::IsNullOrWhiteSpace([string]$scriptEntry.description) -or
+        [string]$scriptEntry.path -notmatch '^library/[A-Za-z0-9_-][A-Za-z0-9._-]*\.(ps1|bat|cmd|py)$') {
+        throw 'The script manifest contains an invalid entry. Each entry needs a name, description, and a library path ending in .ps1, .bat, .cmd, or .py.'
+    }
+}
+
+Write-Host 'Available scripts:'
+for ($index = 0; $index -lt $availableScripts.Count; $index++) {
+    $scriptEntry = $availableScripts[$index]
+    Write-Host "$($index + 1). $($scriptEntry.name) - $($scriptEntry.description)"
+}
+
+$selection = Read-Host 'Enter the number of the script to run'
+$selectionNumber = 0
+if (-not [int]::TryParse($selection, [ref]$selectionNumber) -or
+    $selectionNumber -lt 1 -or
+    $selectionNumber -gt $availableScripts.Count) {
+    throw "Invalid selection '$selection'. Enter a number from 1 to $($availableScripts.Count)."
+}
+
+$selectedScript = $availableScripts[$selectionNumber - 1]
+$confirmation = Read-Host "Download and run '$($selectedScript.name)'? (y/N)"
+if ($confirmation -notmatch '^[yY]$') {
+    Write-Host 'Cancelled.'
+    return
+}
+
+$scriptUrl = "$baseUrl/$($selectedScript.path)"
+$response = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop
+if ([string]::IsNullOrWhiteSpace($response.Content)) {
+    throw "The script at $scriptUrl is empty."
+}
+
+$extension = [System.IO.Path]::GetExtension($selectedScript.path).ToLowerInvariant()
+$tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString() + $extension)
+
+try {
+    $encoding = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($tempPath, $response.Content, $encoding)
+
+    switch ($extension) {
+        '.ps1' {
+            Invoke-Expression $response.Content
+        }
+        { $_ -in '.bat', '.cmd' } {
+            $commandProcessor = Get-Command -Name 'cmd.exe' -CommandType Application -ErrorAction Stop
+            $process = Start-Process -FilePath $commandProcessor.Source `
+                -ArgumentList @('/d', '/c', "`"$tempPath`"") `
+                -NoNewWindow -Wait -PassThru
+            if ($process.ExitCode -ne 0) {
+                throw "The batch script exited with code $($process.ExitCode)."
+            }
+        }
+        '.py' {
+            $python = Get-Command -Name @('py', 'python', 'python3') `
+                -CommandType Application -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($null -eq $python) {
+                throw 'Python was not found. Install Python and ensure py, python, or python3 is on PATH.'
+            }
+
+            if ($python.Name -match '^py(\.exe)?$') {
+                & $python.Source -3 $tempPath
+            }
+            else {
+                & $python.Source $tempPath
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "The Python script exited with code $LASTEXITCODE."
+            }
+        }
+    }
+}
+finally {
+    if (Test-Path -LiteralPath $tempPath) {
+        Remove-Item -LiteralPath $tempPath -Force -ErrorAction Stop
+    }
+}
