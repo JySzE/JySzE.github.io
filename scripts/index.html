@@ -2,7 +2,35 @@ $ErrorActionPreference = 'Stop'
 $baseUrl = 'https://jysze.github.io'
 $manifestUrl = "$baseUrl/manifest.json"
 
-$manifest = Invoke-RestMethod -Uri $manifestUrl -ErrorAction Stop
+function ConvertTo-Text {
+    param([Parameter(Mandatory = $true)] $Response)
+
+    if ($Response -is [string]) {
+        return [string]$Response
+    }
+    if ($Response -is [byte[]]) {
+        return [System.Text.Encoding]::UTF8.GetString($Response)
+    }
+    if ($null -ne $Response.RawContentStream) {
+        $Response.RawContentStream.Position = 0
+        $reader = [System.IO.StreamReader]::new(
+            $Response.RawContentStream,
+            [System.Text.UTF8Encoding]::new($false),
+            $true
+        )
+        try {
+            return $reader.ReadToEnd()
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    throw 'The server response could not be converted to text.'
+}
+
+$manifestResponse = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing -ErrorAction Stop
+$manifestJson = ConvertTo-Text $manifestResponse
+$manifest = $manifestJson | ConvertFrom-Json -ErrorAction Stop
 if ($null -eq $manifest -or $manifest.version -ne 1 -or $null -eq $manifest.scripts) {
     throw "The script manifest at $manifestUrl is invalid or uses an unsupported version."
 }
@@ -44,7 +72,8 @@ if ($confirmation -notmatch '^[yY]$') {
 
 $scriptUrl = "$baseUrl/$($selectedScript.path)"
 $response = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop
-if ([string]::IsNullOrWhiteSpace($response.Content)) {
+$scriptText = ConvertTo-Text $response
+if ([string]::IsNullOrWhiteSpace($scriptText)) {
     throw "The script at $scriptUrl is empty."
 }
 
@@ -53,11 +82,11 @@ $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToStr
 
 try {
     $encoding = [System.Text.UTF8Encoding]::new($false)
-    [System.IO.File]::WriteAllText($tempPath, $response.Content, $encoding)
+    [System.IO.File]::WriteAllText($tempPath, $scriptText, $encoding)
 
     switch ($extension) {
         '.ps1' {
-            Invoke-Expression $response.Content
+            Invoke-Expression $scriptText
         }
         { $_ -in '.bat', '.cmd' } {
             $commandProcessor = Get-Command -Name 'cmd.exe' -CommandType Application -ErrorAction Stop
