@@ -7,7 +7,6 @@ from datetime import datetime
 #Made for SoM Plex HTPC MPV, Plex does not send filenames to the client so you must tag
 #the video stream with the proper tag so the conditional profile will activate.
 
-TARGET_DIR = r"Z:\Media_Files\Plex\Anime" # will process all subfolders
 #add as many keywords as you want following formatting.
 KEYWORDS = ["web-dl", "webdl", "web-rip", "webrip", "subsplease", "erai-raws", "tsundere-raws", "-varyg", "horriblesubs", "subsplus+", "yameii"]
 LOG_FILE = "tagging_history.log"
@@ -21,6 +20,14 @@ logging.basicConfig(
     ]
 )
 
+def prompt_for_directory():
+    while True:
+        raw = input("Enter the directory to process (all subfolders will be included): ").strip()
+        path = os.path.normpath(raw.strip('"').strip("'"))
+        if raw and os.path.isdir(path):
+            return path
+        print(f"Not a valid directory: {raw or '(empty)'}\nTry again.\n")
+
 def update_mkv_title(file_path, tag):
     cmd = ['mkvpropedit', file_path, '--edit', 'track:v1', '--set', f'name={tag}']
     try:
@@ -29,11 +36,11 @@ def update_mkv_title(file_path, tag):
     except subprocess.CalledProcessError:
         return False
 
-def scan_and_tag():
+def scan_and_tag(target_dir):
     keyword_regex = re.compile('|'.join(re.escape(k) for k in KEYWORDS), re.IGNORECASE)
 
-    logging.info(f"starting scan in: {TARGET_DIR}")
-    for root, _, files in os.walk(TARGET_DIR):
+    logging.info(f"starting scan in: {target_dir}")
+    for root, _, files in os.walk(target_dir):
         for file in files:
             if file.lower().endswith(".mkv"):
                 full_path = os.path.join(root, file)
@@ -47,5 +54,6 @@ def scan_and_tag():
                     logging.info(f"{status} | path: {full_path}")
 
 if __name__ == "__main__":
-    scan_and_tag()
+    target = prompt_for_directory()
+    scan_and_tag(target)
     logging.info("Process Complete.")
