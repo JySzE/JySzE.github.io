@@ -2,28 +2,28 @@
   "version": 1,
   "scripts": [
     {
-      "name": "Windows 11 Optimizer",
-      "description": "Apply Windows 11 performance tuning and cleanup changes with a guided batch script.",
+      "name": "Windows 11 Optimizer.bat",
+      "description": "Apply Windows 11 performance tuning & cleanup.",
       "path": "library/11_Optimizer.bat"
     },
     {
-      "name": "Windows 10 Optimizer",
-      "description": "Apply Windows 10 performance tuning and cleanup changes with a guided batch script.",
+      "name": "Windows 10 Optimizer.bat",
+      "description": "Apply Windows 10 performance tuning & cleanup.",
       "path": "library/W10_optimizer.bat"
     },
     {
-      "name": "Plex Web Tagger",
-      "description": "Tag MKV files with release-keyword metadata so Plex MPV profiles trigger correctly.",
+      "name": "Plex Web Tagger.py",
+      "description": "Tag MKV files with release keyword metadata so Plex HTPC with SoM mpv.conf profiles trigger correctly.",
       "path": "library/Plex_WEB_Tagger.py"
     },
     {
-      "name": "SoM MPV Setup",
-      "description": "Download and manage the MPV portable/install/uninstall setup used for a home theater workflow.",
+      "name": "SoM MPV Setup.ps1",
+      "description": "Download & manage the SoM MPV portable/install/uninstall setup.",
       "path": "library/SoM_MPV.ps1"
     },
     {
-      "name": "TBO Track Organizer",
-      "description": "Review and remove unwanted MKV audio and subtitle tracks while keeping preferred language sets.",
+      "name": "TBO.py",
+      "description": " Total Bloat Obliteration review & remove unwanted MKV audio & subtitle tracks.",
       "path": "library/TBO.py"
     }
   ]
