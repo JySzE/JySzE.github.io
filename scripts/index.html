@@ -28,6 +28,57 @@ function ConvertTo-Text {
     throw 'The server response could not be converted to text.'
 }
 
+function Select-MenuItem {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Items,
+        [string]$Title = 'Select a script  (Up/Down to move, Enter to run, Esc to cancel)'
+    )
+
+    $selected = 0
+    $width = [Math]::Max(20, [Console]::WindowWidth - 1)
+    $startTop = 0
+    $firstDraw = $true
+    $oldCursor = [Console]::CursorVisible
+
+    Write-Host $Title -ForegroundColor Cyan
+    Write-Host ''
+    [Console]::CursorVisible = $false
+    try {
+        while ($true) {
+            if (-not $firstDraw) { [Console]::SetCursorPosition(0, $startTop) }
+
+            for ($i = 0; $i -lt $Items.Count; $i++) {
+                $text = "  $($Items[$i].name) - $($Items[$i].description)"
+                if ($text.Length -gt $width) { $text = $text.Substring(0, $width - 3) + '...' }
+                $text = $text.PadRight($width)
+
+                if ($i -eq $selected) {
+                    Write-Host $text -ForegroundColor Black -BackgroundColor Cyan
+                }
+                else {
+                    Write-Host $text
+                }
+            }
+
+            if ($firstDraw) {
+                $startTop = [Console]::CursorTop - $Items.Count
+                $firstDraw = $false
+            }
+
+            $key = [Console]::ReadKey($true)
+            switch ($key.Key) {
+                'UpArrow'   { $selected = ($selected - 1 + $Items.Count) % $Items.Count }
+                'DownArrow' { $selected = ($selected + 1) % $Items.Count }
+                'Enter'     { return $Items[$selected] }
+                'Escape'    { return $null }
+            }
+        }
+    }
+    finally {
+        [Console]::CursorVisible = $oldCursor
+    }
+}
+
 $manifestResponse = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing -ErrorAction Stop
 $manifestJson = ConvertTo-Text $manifestResponse
 $manifest = $manifestJson | ConvertFrom-Json -ErrorAction Stop
@@ -49,26 +100,12 @@ foreach ($scriptEntry in $availableScripts) {
     }
 }
 
-Write-Host 'Available scripts:'
-for ($index = 0; $index -lt $availableScripts.Count; $index++) {
-    $scriptEntry = $availableScripts[$index]
-    Write-Host "$($index + 1). $($scriptEntry.name) - $($scriptEntry.description)"
-}
-
-$selection = Read-Host 'Enter the number of the script to run'
-$selectionNumber = 0
-if (-not [int]::TryParse($selection, [ref]$selectionNumber) -or
-    $selectionNumber -lt 1 -or
-    $selectionNumber -gt $availableScripts.Count) {
-    throw "Invalid selection '$selection'. Enter a number from 1 to $($availableScripts.Count)."
-}
-
-$selectedScript = $availableScripts[$selectionNumber - 1]
-$confirmation = Read-Host "Download and run '$($selectedScript.name)'? (y/N)"
-if ($confirmation -notmatch '^[yY]$') {
+$selectedScript = Select-MenuItem -Items $availableScripts
+if ($null -eq $selectedScript) {
     Write-Host 'Cancelled.'
     return
 }
+Write-Host "Running '$($selectedScript.name)'..." -ForegroundColor Green
 
 $scriptUrl = "$baseUrl/$($selectedScript.path)"
 $response = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop
