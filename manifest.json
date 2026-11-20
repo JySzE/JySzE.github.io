@@ -13,7 +13,7 @@
     },
     {
       "name": "Plex Web Tagger.py",
-      "description": "Tag MKV files with release keyword metadata so Plex HTPC with SoM mpv.conf profiles trigger correctly.",
+      "description": "Tag MKVs with release keyword metadata so Plex HTPC with SoM mpv.conf profiles can trigger.",
       "path": "library/Plex_WEB_Tagger.py"
     },
     {
